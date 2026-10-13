@@ -1,213 +1,86 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pennywise – Smart Budget Tracker</title>
-  <meta name="description" content="Pennywise is a beautiful, private budgeting app. Track income and expenses, set category budgets and see where your money goes. Runs entirely in your browser.">
-  <meta name="theme-color" content="#6366f1">
+  <title>Pennywise · Smart Budget Tracker</title>
+  <meta name="description" content="Pennywise is a private personal finance app. Track spending, forecast your month, set goals and get clear insights. Runs entirely in your browser.">
+  <meta name="theme-color" content="#0b1020">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <script>
-    /* Apply saved theme before first paint to avoid a flash */
+    /* Apply saved theme and sidebar state before first paint (no flash). */
     try {
-      var s = JSON.parse(localStorage.getItem('pennywise.v1') || '{}');
-      if (s.theme) document.documentElement.dataset.theme = s.theme;
+      var s = JSON.parse(localStorage.getItem('pennywise.v1') || '{}'), t = s.theme || 'dark';
+      if (t === 'system') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+      if (s.sidebar === 'collapsed') document.documentElement.classList.add('nav-collapsed');
     } catch (e) {}
   </script>
 </head>
 <body>
-  <div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <a class="skip" href="#main">Skip to content</a>
 
-  <div class="app">
-    <header class="topbar reveal" style="--i:0">
-      <a class="brand" href="./" aria-label="Pennywise home">
-        <span class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 3 8-9"/><path d="M15 5h5v5"/></svg>
-        </span>
-        <span class="brand-name">Pennywise</span>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Sidebar">
+      <a class="brand" href="#/dashboard" aria-label="Pennywise dashboard">
+        <span class="logo" data-icon="trendUp"></span>
+        <span class="brand-text"><b>Pennywise</b><small>Smart Budget Tracker</small></span>
       </a>
-
-      <div class="month-nav" role="group" aria-label="Choose month">
-        <button class="icon-btn" id="prevMonth" aria-label="Previous month">‹</button>
-        <span id="monthLabel" aria-live="polite"></span>
-        <button class="icon-btn" id="nextMonth" aria-label="Next month">›</button>
+      <nav class="nav" id="nav" aria-label="Main"></nav>
+      <div class="sb-foot">
+        <div class="sb-note"><span data-icon="shield"></span><span class="nav-label">Your data stays on this device</span></div>
+        <button class="sb-collapse" id="collapseBtn" aria-label="Collapse sidebar" title="Collapse sidebar"><span data-icon="panel"></span><span class="nav-label">Collapse</span></button>
       </div>
+    </aside>
 
-      <div class="actions">
-        <label class="select-wrap" title="Currency">
-          <span class="sr-only">Currency</span>
-          <select id="currency">
-            <option value="USD">USD $</option>
-            <option value="EUR">EUR €</option>
-            <option value="GBP">GBP £</option>
-            <option value="INR">INR ₹</option>
-            <option value="JPY">JPY ¥</option>
-            <option value="CAD">CAD $</option>
-            <option value="AUD">AUD $</option>
-          </select>
-        </label>
-        <button class="icon-btn" id="themeBtn" aria-label="Toggle dark mode" title="Toggle theme">
-          <span class="theme-icon" aria-hidden="true"></span>
-        </button>
-        <button class="btn primary" id="addBtn">
-          <span class="plus" aria-hidden="true">+</span><span class="btn-label">Add transaction</span>
-        </button>
-      </div>
-    </header>
-
-    <main>
-      <h1 class="sr-only">Budget overview</h1>
-
-      <!-- Stat cards -->
-      <section class="stats" aria-label="Summary">
-        <article class="stat hero reveal" style="--i:1">
-          <span class="stat-label">Total balance</span>
-          <strong class="stat-value" id="balance">–</strong>
-          <span class="pill" id="balanceDelta"></span>
-          <svg class="hero-art" viewBox="0 0 200 80" aria-hidden="true" preserveAspectRatio="none"><path d="M0 60 C30 20 60 70 100 40 S170 10 200 30 V80 H0Z"/></svg>
-        </article>
-        <article class="stat reveal" style="--i:2">
-          <span class="stat-icon income" aria-hidden="true">↓</span>
-          <span class="stat-label">Income</span>
-          <strong class="stat-value" id="income">–</strong>
-          <span class="pill" id="incomeDelta"></span>
-        </article>
-        <article class="stat reveal" style="--i:3">
-          <span class="stat-icon expense" aria-hidden="true">↑</span>
-          <span class="stat-label">Expenses</span>
-          <strong class="stat-value" id="expense">–</strong>
-          <span class="pill" id="expenseDelta"></span>
-        </article>
-        <article class="stat reveal" style="--i:4">
-          <span class="stat-icon save" aria-hidden="true">%</span>
-          <span class="stat-label">Savings rate</span>
-          <strong class="stat-value" id="savings">–</strong>
-          <div class="meter" aria-hidden="true"><span id="savingsBar"></span></div>
-        </article>
-      </section>
-
-      <section class="grid">
-        <!-- Spending breakdown -->
-        <article class="card reveal" style="--i:5" aria-labelledby="spendTitle">
-          <header class="card-head">
-            <div><h2 id="spendTitle">Spending breakdown</h2><p class="sub">Where your money went this month</p></div>
-          </header>
-          <div class="donut-wrap">
-            <div class="donut" id="donut">
-              <svg viewBox="0 0 200 200" role="img" aria-label="Donut chart of spending by category">
-                <circle class="donut-track" cx="100" cy="100" r="78"/>
-                <g id="segs" transform="rotate(-90 100 100)"></g>
-              </svg>
-              <div class="donut-center" aria-live="polite">
-                <span class="dc-label" id="dcLabel">Spent</span>
-                <strong class="dc-value" id="dcValue">–</strong>
-                <span class="dc-sub" id="dcSub"></span>
-              </div>
-            </div>
-            <ul class="legend" id="legend"></ul>
+    <div class="main-col">
+      <header class="topbar">
+        <a class="m-brand" href="#/dashboard" aria-label="Pennywise"><span class="logo" data-icon="trendUp"></span></a>
+        <div class="page-head">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSub"></p>
+        </div>
+        <div class="top-actions">
+          <div class="month-nav" id="monthNav" role="group" aria-label="Choose month">
+            <button class="icon-btn sm" id="prevMonth" aria-label="Previous month"><span data-icon="chevL"></span></button>
+            <button class="month-label" id="monthLabel" title="Jump to current month"></button>
+            <button class="icon-btn sm" id="nextMonth" aria-label="Next month"><span data-icon="chevR"></span></button>
           </div>
-        </article>
-
-        <!-- Budgets -->
-        <article class="card reveal" style="--i:6" aria-labelledby="budgetTitle">
-          <header class="card-head">
-            <div><h2 id="budgetTitle">Monthly budgets</h2><p class="sub" id="budgetInsight">&nbsp;</p></div>
-          </header>
-          <ul class="budgets" id="budgets"></ul>
-          <p class="hint">Tip: tap a limit to change it.</p>
-        </article>
-
-        <!-- Trend -->
-        <article class="card trend-card reveal" style="--i:7" aria-labelledby="trendTitle">
-          <header class="card-head">
-            <div><h2 id="trendTitle">6-month trend</h2><p class="sub">Income vs. expenses</p></div>
-            <div class="key"><span><i class="dot income"></i>Income</span><span><i class="dot expense"></i>Expenses</span></div>
-          </header>
-          <div class="trend" id="trend"></div>
-        </article>
-
-        <!-- Transactions -->
-        <article class="card reveal" style="--i:8" aria-labelledby="txTitle">
-          <header class="card-head">
-            <div><h2 id="txTitle">Transactions</h2><p class="sub" id="txCount"></p></div>
-          </header>
-          <div class="filters">
-            <label class="search">
-              <span class="sr-only">Search transactions</span>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-              <input type="search" id="search" placeholder="Search…" autocomplete="off">
-            </label>
-            <div class="tabs" role="tablist" aria-label="Filter by type" id="typeTabs">
-              <button role="tab" class="active" data-type="all" aria-selected="true">All</button>
-              <button role="tab" data-type="income" aria-selected="false">Income</button>
-              <button role="tab" data-type="expense" aria-selected="false">Expenses</button>
-            </div>
-          </div>
-          <ul class="tx-list" id="txList"></ul>
-          <div class="empty" id="empty" hidden>
-            <div class="empty-emoji" aria-hidden="true">🪙</div>
-            <h3>Nothing here yet</h3>
-            <p>Add your first transaction to start tracking.</p>
-            <button class="btn primary" id="emptyAdd">Add transaction</button>
-          </div>
-          <footer class="card-foot">
-            <button class="btn ghost" id="exportBtn">Export CSV</button>
-            <button class="btn ghost" id="demoBtn">Load demo data</button>
-            <button class="btn ghost danger" id="clearBtn">Clear all</button>
-          </footer>
-        </article>
-      </section>
-    </main>
-
-    <footer class="site-foot">
-      Your data never leaves this device · saved in your browser's local storage
-    </footer>
-  </div>
-
-  <!-- Add transaction dialog -->
-  <dialog id="dlg" aria-labelledby="dlgTitle">
-    <form id="txForm" novalidate>
-      <header class="dlg-head">
-        <h2 id="dlgTitle">New transaction</h2>
-        <button type="button" class="icon-btn" id="closeDlg" aria-label="Close">✕</button>
+          <button class="btn ghost-search" id="cmdBtn" aria-label="Open command palette"><span data-icon="search"></span><span class="hide-sm">Search</span><kbd class="hide-sm">Ctrl K</kbd></button>
+          <button class="icon-btn bordered" id="themeBtn" aria-label="Toggle theme"></button>
+          <button class="btn primary" id="addBtn"><span data-icon="plus"></span><span class="hide-sm">Add transaction</span></button>
+        </div>
       </header>
 
-      <div class="seg" role="radiogroup" aria-label="Transaction type">
-        <input type="radio" name="type" id="tExp" value="expense" checked>
-        <label for="tExp">Expense</label>
-        <input type="radio" name="type" id="tInc" value="income">
-        <label for="tInc">Income</label>
-        <span class="seg-thumb" aria-hidden="true"></span>
-      </div>
+      <main id="main" tabindex="-1">
+        <section class="view" id="v-dashboard" hidden></section>
+        <section class="view" id="v-transactions" hidden></section>
+        <section class="view" id="v-budgets" hidden></section>
+        <section class="view" id="v-goals" hidden></section>
+        <section class="view" id="v-insights" hidden></section>
+        <section class="view" id="v-settings" hidden></section>
+      </main>
+    </div>
+  </div>
 
-      <label class="field">
-        <span>Amount</span>
-        <div class="amount-wrap"><i id="curSym">$</i><input id="amount" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" required></div>
-      </label>
-
-      <label class="field">
-        <span>Description</span>
-        <input id="desc" type="text" maxlength="60" placeholder="e.g. Weekly groceries" autocomplete="off">
-      </label>
-
-      <fieldset class="field">
-        <legend>Category</legend>
-        <div class="chips" id="chips"></div>
-      </fieldset>
-
-      <label class="field">
-        <span>Date</span>
-        <input id="date" type="date" required>
-      </label>
-
-      <p class="error" id="formErr" role="alert" hidden></p>
-      <button class="btn primary wide" type="submit">Add transaction</button>
-    </form>
-  </dialog>
-
+  <dialog id="modal" aria-modal="true"></dialog>
+  <dialog id="palette" aria-label="Command palette"></dialog>
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
+  <noscript><p style="padding:24px;color:#e6eaf5">Pennywise needs JavaScript to run.</p></noscript>
+
+  <script src="js/core.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/budgets.js"></script>
+  <script src="js/goals.js"></script>
+  <script src="js/insights.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
