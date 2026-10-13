@@ -62,3 +62,9 @@ js/app.js           router, theme, shortcuts
 ## License
 
 MIT
+
+## Automatic publishing
+
+`.github/workflows/pages.yml` publishes the site to GitHub Pages on every push to `main` (or the working branch) and can be run by hand from the **Actions** tab. It syntax-checks the scripts first, so a broken push never goes live.
+
+One-time setup: **Settings → Pages → Build and deployment → Source → GitHub Actions**.
